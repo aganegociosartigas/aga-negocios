@@ -1,0 +1,315 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USUARIOS Y AUTENTICACIÓN
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String?
+  role          String    @default("admin") // admin, editor, viewer
+  isActive      Boolean   @default(true)
+  lastLogin     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relaciones
+  products      Product[]
+  popups        Popup[]
+  contacts      Contact[]
+  newsletters   Newsletter[]
+  auctions      Auction[]
+}
+
+// ============================================
+// PRODUCTOS / TIENDA
+// ============================================
+
+model Product {
+  id            String    @id @default(cuid())
+  productId     String    @unique // ID público: AGA-001, AGA-002, etc.
+  name          String
+  description   String?
+  price         Float
+  originalPrice Float?
+  category      String?   // electrónica, muebles, vehículos, etc.
+  condition     String?   // nuevo, seminuevo, usado
+  status        String    @default("available") // available, reserved, sold
+  
+  // Imágenes (array JSON)
+  images        String    @default("[]") // JSON array de URLs
+  
+  // Badges y etiquetas
+  badge         String?   // 🔥 Hot, ⭐ Seminuevo, 💎 Premium, 🏷️ Oferta, ✨ Nuevo, 💖 Exclusivo
+  tags          String    @default("[]") // JSON array de tags
+  
+  // Detalles adicionales
+  brand         String?
+  model         String?
+  year          String?
+  location      String?
+  
+  // SEO
+  slug          String    @unique
+  metaTitle     String?
+  metaDesc      String?
+  
+  // Métricas
+  views         Int       @default(0)
+  whatsappClicks Int      @default(0)
+  
+  // Fechas
+  featured      Boolean   @default(false)
+  published     Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relación con usuario que creó el producto
+  createdById   String?
+  createdBy     User?     @relation(fields: [createdById], references: [id])
+}
+
+// ============================================
+// CONTACTOS / REGISTROS
+// ============================================
+
+model Contact {
+  id            String    @id @default(cuid())
+  type          String    @default("general") // general, whatsapp, newsletter, quote, auction
+  
+  // Datos de contacto
+  name          String?
+  email         String?
+  phone         String?
+  whatsapp      String?
+  
+  // Mensaje o consulta
+  subject       String?
+  message       String?
+  
+  // Interés
+  productId     String?   // Si consulta por un producto específico
+  interest      String?   // tasación, remate, compra, venta
+  
+  // Estado
+  status        String    @default("new") // new, contacted, converted, lost
+  notes         String?   // Notas internas
+  
+  // Fuente
+  source        String?   // landing, popup, referral, social
+  
+  // Marketing
+  acceptMarketing Boolean @default(false)
+  
+  // Fechas
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relación
+  createdById   String?
+  createdBy     User?     @relation(fields: [createdById], references: [id])
+}
+
+// ============================================
+// NEWSLETTER / SUSCRIPCIONES
+// ============================================
+
+model Newsletter {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  
+  // Datos adicionales
+  name          String?
+  phone         String?
+  interests     String    @default("[]") // JSON array de intereses
+  
+  // Estado
+  isActive      Boolean   @default(true)
+  verified      Boolean   @default(false)
+  verifiedAt    DateTime?
+  
+  // Preferencias
+  frequency     String    @default("weekly") // daily, weekly, monthly
+  format        String    @default("html") // html, text
+  
+  // Métricas
+  emailsSent    Int       @default(0)
+  emailsOpened  Int       @default(0)
+  clicks        Int       @default(0)
+  
+  // Fuente
+  source        String?   // popup, footer, checkout
+  
+  // Fechas
+  unsubscribedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relación
+  createdById   String?
+  createdBy     User?     @relation(fields: [createdById], references: [id])
+}
+
+// ============================================
+// POPUPS / ANUNCIOS
+// ============================================
+
+model Popup {
+  id            String    @id @default(cuid())
+  name          String    // Nombre interno para identificación
+  
+  // Contenido
+  title         String
+  subtitle      String?
+  description   String?
+  imageUrl      String?
+  
+  // Tipo de popup
+  type          String    @default("promo") // promo, notice, discount, newsletter, auction
+  
+  // Configuración de descuento
+  discountCode  String?
+  discountPercent Int?
+  discountValue   Float?
+  discountExpiry  DateTime?
+  
+  // Botón de acción
+  buttonText    String?
+  buttonUrl     String?
+  buttonAction  String?   // url, whatsapp, phone, newsletter
+  
+  // Segmentación
+  showOnPages   String    @default("[]") // JSON array de páginas donde mostrar
+  triggerType   String    @default("time") // time, scroll, exit, click
+  triggerValue  Int       @default(3000) // ms para time, % para scroll
+  
+  // Frecuencia
+  frequency     String    @default("once") // once, session, always
+  maxShows      Int       @default(3)
+  
+  // Estado
+  isActive      Boolean   @default(true)
+  
+  // Fechas de vigencia
+  startDate     DateTime?
+  endDate       DateTime?
+  
+  // Métricas
+  impressions   Int       @default(0)
+  clicks        Int       @default(0)
+  conversions   Int       @default(0)
+  
+  // Fechas
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relación
+  createdById   String?
+  createdBy     User?     @relation(fields: [createdById], references: [id])
+}
+
+// ============================================
+// REMATES / SUBASTAS
+// ============================================
+
+model Auction {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  
+  // Fecha y hora
+  date          DateTime
+  endTime       DateTime?
+  location      String?
+  address       String?
+  
+  // Catálogo
+  catalogUrl    String?
+  itemsCount    Int       @default(0)
+  
+  // Imágenes
+  imageUrl      String?
+  gallery       String    @default("[]") // JSON array
+  
+  // Estado
+  status        String    @default("upcoming") // upcoming, live, ended, cancelled
+  
+  // Configuración
+  requiresRegistration Boolean @default(false)
+  deposit       Float?
+  
+  // Contacto
+  phone         String?
+  whatsapp      String?
+  email         String?
+  
+  // SEO
+  slug          String    @unique
+  metaTitle     String?
+  metaDesc      String?
+  
+  // Métricas
+  views         Int       @default(0)
+  registrations Int       @default(0)
+  
+  // Fechas
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relación
+  createdById   String?
+  createdBy     User?     @relation(fields: [createdById], references: [id])
+}
+
+// ============================================
+// CONFIGURACIÓN DEL SITIO
+// ============================================
+
+model SiteConfig {
+  id            String    @id @default(cuid())
+  key          String    @unique
+  value        String
+  description  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// ============================================
+// SESIONES (para autenticación simple)
+// ============================================
+
+model Session {
+  id            String    @id @default(cuid())
+  userId        String
+  token         String    @unique
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+}
+
+// ============================================
+// LOGS DE ACTIVIDAD
+// ============================================
+
+model ActivityLog {
+  id            String    @id @default(cuid())
+  action        String    // create, update, delete, login, logout
+  entity        String    // product, contact, popup, etc.
+  entityId      String?
+  userId        String?
+  details       String?   // JSON con detalles de la acción
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime  @default(now())
+}
